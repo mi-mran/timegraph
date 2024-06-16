@@ -2,7 +2,6 @@
 import pytesseract
 from PIL import Image
 from pdf2image import convert_from_bytes, convert_from_path
-from pypdf import PdfReader
 import re
 
 pdf_path = "/Users/imran/Downloads/sg_judgements/[2024] SGCA 15.pdf"
