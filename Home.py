@@ -48,7 +48,7 @@ def main():
     st.markdown("* Customise the start-end range and keywords to be searched. (coming soon!)")
     st.markdown("* Reference your document right from the timeline. (coming soon!)")
 
-    st.markdown("# INSERT SHOWCASE GIF HERE")
+    st.image('assets/timegraph-demo.gif')
 
     st.markdown("## How to Use")
     st.markdown("1. To get started, <a href='timegraph.streamlit.app/Dashboard' target='_self'>sign up</a> for an account (*disabled for buildclub demo, login only*).", unsafe_allow_html=True)
