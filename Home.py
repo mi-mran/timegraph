@@ -64,7 +64,7 @@ def main():
     st.markdown("## Notes")
     st.markdown("timegraph is currently a work in progress and we would love to hear your feedback (whether you're a buildclub judge or not!). We believe in building tools that automate menial workflows, so that users can better focus their time on more important, analytical tasks. Thus far, we have spoken to paralegals and academics on the problems they face with structuring a coherent timeline (ie. fact-finding) when presented with large documents. We would like to hear from you if you have any feedback on how we can expand our use cases, or introducing additional functionalities that you would love to see.")
     st.markdown("Fill up the feedback form with your thoughts (or if you just wanna chat, we're happy to meet new peeps too!)")
-    st.markdown("\- timegraph team")
+    st.markdown("- timegraph team")
 
     st.markdown("## Future Development")
     st.markdown("We are far from a finished product and here are some of the features that we intend to develop in the near future:")
