@@ -3,9 +3,11 @@ from dotenv import load_dotenv
 import os
 import time
 from supabase import create_client
+from st_supabase_connection import SupabaseConnection
 
 @st.cache_resource
 def load_supabase_client():
+    conn = st.connection("supabase", type=SupabaseConnection)
     st_supabase_client = create_client(supabase_url=os.environ.get("SUPABASE_URL"), supabase_key=os.environ.get("SUPABASE_KEY"))
     
     return st_supabase_client
