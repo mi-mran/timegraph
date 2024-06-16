@@ -88,6 +88,7 @@ SQLAlchemy==2.0.30
 st-supabase-connection==2.0.0
 storage3==0.7.6
 streamlit==1.35.0
+streamlit-timeline==0.0.2
 StrEnum==0.4.15
 supabase==2.5.0
 supafunc==0.4.6
