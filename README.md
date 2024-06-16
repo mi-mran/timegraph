@@ -13,6 +13,8 @@
 * Customise the start-end range and keywords to be searched. (coming soon!)
 * Reference your document right from the timeline. (coming soon!)
 
+![timegraph-demo](assets/timegraph-demo.gif)
+
 ## Notes
 timegraph is currently a work in progress and we would love to hear your feedback (whether you're a buildclub judge or not!). We believe in building tools that automate menial workflows, so that users can better focus their time on more important, analytical tasks. Thus far, we have spoken to paralegals and academics on the problems they face with structuring a coherent timeline (ie. fact-finding) when presented with large documents. We would like to hear from you if you have any feedback on how we can expand our use cases, or introducing additional functionalities that you would love to see.
 \- timegraph team
