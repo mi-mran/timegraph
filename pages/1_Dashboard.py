@@ -11,7 +11,6 @@ from langchain_community.embeddings import SentenceTransformerEmbeddings
 #from langchain_community.vectorstores import FAISS
 import ollama
 from itertools import product
-import vecs
 import re
 import time
 import json
@@ -45,6 +44,12 @@ def get_pdf_text(pdf_doc):
 
     return text_overall, doc_name
 
+def upload_pdf_to_bucket(pdf_file, supabase_client):
+    supabase_client.storage.from_("documents_file").upload(file=pdf_file, file_options={"content-type": "application/pdf"})
+    signed_url = supabase_client.storage.from_("documents_file").create_signed_url(f'{pdf_file.name}', 31536000)
+
+    return signed_url
+
 def get_text_chunks(raw_text):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size = 1000,
@@ -56,7 +61,7 @@ def get_text_chunks(raw_text):
 
     return chunks
 
-def add_vectorstore(embed_model, text_chunks, doc_name, supabase_client):
+def add_vectorstore(embed_model, text_chunks, doc_name, doc_url, supabase_client):
     #model = SentenceTransformer('Alibaba-NLP/gte-large-en-v1.5', trust_remote_code=True)
     #embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/gtr-t5-base')
     embed_model = embed_model
@@ -72,18 +77,20 @@ def add_vectorstore(embed_model, text_chunks, doc_name, supabase_client):
         value = {
             'doc_name': doc_name,
             'content': chunk,
-            'embedding_vector': embedding
+            'embedding_vector': embedding,
+            'file_url': doc_url
                  }
         update_list.append(value)
     
-    data = supabase_client.table('documents').insert(update_list).execute()
-    data.create_index(measure=vecs.IndexMeasure.cosine_distance)
+    #data = supabase_client.table('documents').insert(update_list).execute()
+    #data.create_index(measure=vecs.IndexMeasure.cosine_distance)
     print('Uploaded to supabase!')
     #supabase_client.auth.sign_out()
     
     #return embeddings
 
 def vec_search(supabase_client, user_id, k: int = 50):
+    # currently not in use since naive sequential similarity search is used instead
     query = "Extract a timeline with dates from the document given below. The timeline should be stored in json as an array of event objects where each event has the attributes 'year', 'month', 'day_of_month' and 'event'."
     #relevant_chunks = vectorstore.similarity_search(query, k=k)
     
@@ -262,22 +269,30 @@ def main():
                 embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/gtr-t5-base')
                 #embed_model = SentenceTransformerEmbeddings(model_name='nreimers/MiniLM-L6-H384-uncased')
 
-                # 1. get text from PDFs
+                # 1. get text from PDFs and upload PDF file to documents_file bucket
+                doc_bucket_url = upload_pdf_to_bucket(pdf_doc, st_supabase_client)
                 raw_text, doc_name = get_pdf_text(pdf_doc)
-                st.write(raw_text)
+                #st.write(raw_text)
 
                 # 2. get text chunks from extracted texts
                 text_chunks = get_text_chunks(raw_text)
-                st.write(text_chunks)
+                #st.write(text_chunks)
 
                  # 3. create vector store
-                add_vectorstore(embed_model, text_chunks, doc_name, supabase_client=st_supabase_client)
+                add_vectorstore(embed_model, text_chunks, doc_name, doc_url=doc_bucket_url, supabase_client=st_supabase_client)
+
+                success_upload = st.container()
+
+                with success_upload:
+                    st.success(f'Uploaded {pdf_doc.name} to database!')
+                    time.sleep(3)
+                    success_upload.empty()
 
                 # 4. prompt & search for timeline information
-                vec_results = vec_search(supabase_client=st_supabase_client, user_id=st.session_state.id)
-                vec_results.create_index
+                #vec_results = vec_search(supabase_client=st_supabase_client, user_id=st.session_state.id)
+                #vec_results.create_index
 
-                st.write(vec_results.data)
+                #st.write(vec_results.data)
 
         current_uploaded_docs = st.container()
 
