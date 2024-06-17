@@ -123,15 +123,18 @@ def create_item_summary(text):
     #response = ollama.generate(model='llama3', prompt=raw_prompt)
     # for Angeal's cloudflare API endpoint for ollama
     data = {
+        # for Glenn's API endpoint for ollama
         "model": "llama3:8b",
+        # for local instance of ollama
+        #"model": "llama3",
         "prompt": raw_prompt,
         "raw": True,
         "stream": False
         }
 
     headers = {
-        "CF-Access-Client-Id": "39981a91c96dfa790e42fac0727ffb5d.access",
-        "CF-Access-Client-Secret": "f88df2b4ad5440a0aa3ca2478c0c729780dc69a14ca2cbfbf79605c89f5d38c2"
+        "CF-Access-Client-Id": os.environ.get("CF_ACCESS_CLIENT_ID"),
+        "CF-Access-Client-Secret": os.environ.get("CF_ACCESS_CLIENT_SECRET")
         }
     
     # for Angeal's cloudflare API endpoint for ollama
