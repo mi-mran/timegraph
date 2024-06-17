@@ -16,6 +16,7 @@ import re
 import time
 import json
 from streamlit_timeline import timeline
+import requests
 
 
 def get_pdf_text(pdf_doc):
@@ -117,10 +118,31 @@ def create_item_summary(text):
     <|eot_id|><|start_header_id|>user<|end_header_id|>
     {user_prompt}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
     """
-
-    response = ollama.generate(model='llama3', prompt=raw_prompt)
     
-    response = response["response"]
+    # for local instance of ollama
+    #response = ollama.generate(model='llama3', prompt=raw_prompt)
+    # for Angeal's cloudflare API endpoint for ollama
+    data = {
+        "model": "llama3:8b",
+        "prompt": raw_prompt,
+        "raw": True,
+        "stream": False
+        }
+
+    headers = {
+        "CF-Access-Client-Id": "39981a91c96dfa790e42fac0727ffb5d.access",
+        "CF-Access-Client-Secret": "f88df2b4ad5440a0aa3ca2478c0c729780dc69a14ca2cbfbf79605c89f5d38c2"
+        }
+    
+    # for Angeal's cloudflare API endpoint for ollama
+    #response = requests.post("https://home-ollama.justpotato.org/api/generate", data=json.dumps(data), headers=headers).text
+    # for Glenn's API endpoint for ollama
+    response = requests.post("https://office-ollama.justpotato.org/api/generate", data=json.dumps(data), headers=headers).text
+    
+    # for Glenn's API endpoint for ollama
+    response = json.loads(response)["response"]
+    # for local instance of ollama
+    #response = response["response"]
     response = response.replace("```json", "").replace("```", "").replace("\n", " ").strip()
     response = json.loads('[' + re.search(r'.*?\[(.*)].*',response).group(1) + ']')
     
