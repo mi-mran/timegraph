@@ -33,7 +33,7 @@ def get_pdf_text(pdf_doc):
         if not re.search('table of content', text, re.IGNORECASE):
             text_overall += text
 
-    print(text_overall)
+    #print(text_overall)
     
         # using pypdf2
         #pdf_reader = PdfReader(pdf)
@@ -45,10 +45,13 @@ def get_pdf_text(pdf_doc):
     return text_overall, doc_name
 
 def upload_pdf_to_bucket(pdf_file, supabase_client):
-    supabase_client.storage.from_("documents_file").upload(file=pdf_file, file_options={"content-type": "application/pdf"})
-    signed_url = supabase_client.storage.from_("documents_file").create_signed_url(f'{pdf_file.name}', 31536000)
+    # postgres does not allow unsafe characters in filenames, as per s3 docs: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+    upload_filename = re.sub(r"[\ \[\]\{\}\^\%\`\>\<\~\#]+", "_", f"{pdf_file.name}")
+    #print(upload_filename)
+    supabase_client.storage.from_("documents_file").upload(path=f"{st.session_state.id}/{upload_filename}", file=pdf_file.getvalue(), file_options={"content-type": "application/pdf"})
+    signed_url = supabase_client.storage.from_("documents_file").create_signed_url(f"{st.session_state.id}/{upload_filename}", 31536000)
 
-    return signed_url
+    return signed_url["signedURL"]
 
 def get_text_chunks(raw_text):
     text_splitter = RecursiveCharacterTextSplitter(
@@ -82,9 +85,9 @@ def add_vectorstore(embed_model, text_chunks, doc_name, doc_url, supabase_client
                  }
         update_list.append(value)
     
-    #data = supabase_client.table('documents').insert(update_list).execute()
+    data = supabase_client.table('documents').upsert(update_list).execute()
     #data.create_index(measure=vecs.IndexMeasure.cosine_distance)
-    print('Uploaded to supabase!')
+    #print('Uploaded to supabase!')
     #supabase_client.auth.sign_out()
     
     #return embeddings
@@ -107,7 +110,13 @@ def load_supabase_client():
 
 #@st.cache_data
 def get_user_docs(st_supabase_client, user_id):
-    user_docs = st_supabase_client.table('documents').select('doc_name').eq('user_id', f'{user_id}').execute()
+    #user_docs = st_supabase_client.table('documents').select('doc_name', {'distinct': True}).eq('user_id', f'{user_id}').execute()
+    user_docs = st_supabase_client.rpc('doc_names_user', {
+        'id_input': user_id
+        }
+    ).execute()
+    #print(user_docs)
+
     if user_docs is not None:
         doc_names = list({v['doc_name']:v for v in user_docs.data}.values())
         return doc_names
@@ -148,7 +157,7 @@ def create_item_summary(text):
     #response = requests.post("https://home-ollama.justpotato.org/api/generate", data=json.dumps(data), headers=headers).text
     # for Glenn's API endpoint for ollama
     response = requests.post("https://office-ollama.justpotato.org/api/generate", data=json.dumps(data), headers=headers).text
-    
+    #print(response)
     # for Glenn's API endpoint for ollama
     response = json.loads(response)["response"]
     # for local instance of ollama
@@ -158,14 +167,13 @@ def create_item_summary(text):
     
     return response
 
-def generate_timeline(st_supabase_client, user_id, doc_name, timeline_container):
+def generate_timeline(st_supabase_client, user_id, doc_name, timeline_container, embed_model):
     query = "dates and events"
-    embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/gtr-t5-base')
     embed_query = embed_model.embed_query(query)
 
     vec_search_table = st_supabase_client.rpc('vector_search', {
     'query_embedding': embed_query,
-    'similarity_match_threshold': 0.4,
+    'similarity_match_threshold': 0.1,
     'match_count': 10,
     'id_input': user_id,
     'doc_name_input': doc_name
@@ -175,6 +183,8 @@ def generate_timeline(st_supabase_client, user_id, doc_name, timeline_container)
 
     for search_result in vec_search_table.data:
         all_search_results.append(search_result['content']) 
+
+    #print(all_search_results)
     
     response = create_item_summary(all_search_results)
 
@@ -257,6 +267,12 @@ def main():
     disable_process = True
 
     if st.session_state.email != '':
+        # instantiate embedding model
+        # embedding dim.: 768
+        #embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/gtr-t5-base', multi_process=True)
+        # embedding dim.: 384
+        embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/all-MiniLM-L6-v2', multi_process=True)
+
         st.markdown("## Upload your documents here:")
         pdf_doc = st.file_uploader("")
 
@@ -265,10 +281,6 @@ def main():
         
         if st.button('Upload Document', disabled=disable_process):
             with st.spinner():
-                # instantiate embedding model
-                embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/gtr-t5-base')
-                #embed_model = SentenceTransformerEmbeddings(model_name='nreimers/MiniLM-L6-H384-uncased')
-
                 # 1. get text from PDFs and upload PDF file to documents_file bucket
                 doc_bucket_url = upload_pdf_to_bucket(pdf_doc, st_supabase_client)
                 raw_text, doc_name = get_pdf_text(pdf_doc)
@@ -306,7 +318,7 @@ def main():
                 for doc_name in all_user_docs:
                     #st.button(label=f"{doc_name['doc_name']}")
                     if st.button(label=f"{doc_name['doc_name']}"):
-                        generate_timeline(st_supabase_client, st.session_state.id, doc_name['doc_name'], timeline_container)
+                        generate_timeline(st_supabase_client, st.session_state.id, doc_name['doc_name'], timeline_container, embed_model=embed_model)
             else:
                 st.write('You do not have any uploaded documents. Upload a document to start building your timelines.')
             
