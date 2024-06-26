@@ -65,7 +65,6 @@ def get_text_chunks(raw_text):
     return chunks
 
 def add_vectorstore(embed_model, text_chunks, doc_name, doc_url, supabase_client):
-    #model = SentenceTransformer('Alibaba-NLP/gte-large-en-v1.5', trust_remote_code=True)
     #embed_model = SentenceTransformerEmbeddings(model_name='sentence-transformers/gtr-t5-base')
     embed_model = embed_model
     embeddings = embed_model.embed_documents(text_chunks)
@@ -88,7 +87,6 @@ def add_vectorstore(embed_model, text_chunks, doc_name, doc_url, supabase_client
     data = supabase_client.table('documents').upsert(update_list).execute()
     #data.create_index(measure=vecs.IndexMeasure.cosine_distance)
     #print('Uploaded to supabase!')
-    #supabase_client.auth.sign_out()
     
     #return embeddings
 
